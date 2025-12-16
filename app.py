@@ -577,9 +577,5 @@ with tab5:
         except Exception as e:
             st.error(f"Error reading file: {e}")
 
-# Auto-refresh (commented out to prevent infinite loop)
-# Use manual refresh button or implement proper polling mechanism
-# if st.session_state.ingestion_started:
-#     time.sleep(0.5)
-#     st.rerun()
+
 
