@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binance WebSocket Stream - Sample</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        input, button {
+            padding: 10px;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button.stop {
+            background-color: #f44336;
+        }
+        button.stop:hover {
+            background-color: #da190b;
+        }
+        #status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        #data {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #f9f9f9;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .tick {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #4CAF50;
+            background-color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Binance WebSocket Stream - Sample Tool</h1>
+        <p>This is a sample HTML tool for streaming Binance tick data. The main application uses a Python WebSocket client.</p>
+        
+        <div class="controls">
+            <label for="symbol">Symbol:</label>
+            <input type="text" id="symbol" value="btcusdt" placeholder="e.g., btcusdt">
+            <button onclick="connect()">Connect</button>
+            <button class="stop" onclick="disconnect()">Disconnect</button>
+        </div>
+        
+        <div id="status" class="disconnected">Disconnected</div>
+        
+        <h3>Stream Data:</h3>
+        <div id="data"></div>
+    </div>
+
+    <script>
+        let ws = null;
+        let tickCount = 0;
+
+        function connect() {
+            const symbol = document.getElementById('symbol').value.toLowerCase();
+            if (!symbol) {
+                alert('Please enter a symbol');
+                return;
+            }
+
+            // Binance WebSocket URL
+            const wsUrl = `wss://stream.binance.com:9443/ws/${symbol}@trade`;
+            
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = function() {
+                document.getElementById('status').textContent = 'Connected';
+                document.getElementById('status').className = 'connected';
+                tickCount = 0;
+            };
+
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                
+                // Format: {e: "trade", s: "BTCUSDT", p: "50000.00", q: "0.1", T: 1234567890}
+                const tick = {
+                    timestamp: new Date(data.T).toISOString(),
+                    symbol: data.s,
+                    price: parseFloat(data.p),
+                    size: parseFloat(data.q)
+                };
+
+                // Display tick data
+                const tickElement = document.createElement('div');
+                tickElement.className = 'tick';
+                tickElement.textContent = JSON.stringify(tick, null, 2);
+                
+                const dataDiv = document.getElementById('data');
+                dataDiv.insertBefore(tickElement, dataDiv.firstChild);
+                
+                // Keep only last 50 ticks
+                while (dataDiv.children.length > 50) {
+                    dataDiv.removeChild(dataDiv.lastChild);
+                }
+
+                tickCount++;
+                document.getElementById('status').textContent = `Connected - ${tickCount} ticks received`;
+            };
+
+            ws.onerror = function(error) {
+                console.error('WebSocket error:', error);
+                document.getElementById('status').textContent = 'Error occurred';
+                document.getElementById('status').className = 'disconnected';
+            };
+
+            ws.onclose = function() {
+                document.getElementById('status').textContent = 'Disconnected';
+                document.getElementById('status').className = 'disconnected';
+            };
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+
+        // Auto-connect on page load (optional)
+        // window.onload = function() {
+        //     connect();
+        // };
+    </script>
+</body>
+</html>
+
